@@ -6,50 +6,44 @@ import random
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from models import Game, Review
+from models import Game, Review, Base
 
-if __name__ == '__main__':
-    engine = create_engine('sqlite:///one_to_many.db')
-    Session = sessionmaker(bind=engine)
-    session = Session()
+engine = create_engine('sqlite:///one_to_many.db')
+Session = sessionmaker(bind=engine)
+session = Session()
 
-    session.query(Game).delete()
-    session.query(Review).delete()
+fake = Faker()
 
-    fake = Faker()
+# Create sample games
+games = []
+for _ in range(10):  # Increased from 5 to 10
+    game = Game(
+        title=fake.catch_phrase(),
+        genre=fake.word(),
+        platform=fake.word(),
+        price=random.randint(20, 60)
+    )
+    games.append(game)
+    session.add(game)
 
-    genres = ['action', 'adventure', 'strategy',
-        'puzzle', 'first-person shooter', 'racing']
-    platforms = ['nintendo 64', 'gamecube', 'wii', 'wii u', 'switch',
-        'playstation', 'playstation 2', 'playstation 3', 'playstation 4',
-        'playstation 5', 'xbox', 'xbox 360', 'xbox one', 'pc']
+# Create tables in the database
+Base.metadata.create_all(engine)
 
-    games = []
-    for i in range(50):
-        game = Game(
-            title=fake.unique.name(),
-            genre=random.choice(genres),
-            platform=random.choice(platforms),
-            price=random.randint(5, 60)
+# Commit games to the database
+session.commit()
+
+# Create sample reviews with variability
+for game in games:
+    num_reviews = random.randint(1, 5)  # Random number of reviews between 1 and 5
+    for _ in range(num_reviews):
+        review = Review(
+            score=random.randint(1, 10),
+            comment=fake.sentence(),
+            game_id=game.id
         )
+        session.add(review)
 
-        # add and commit individually to get IDs back
-        session.add(game)
-        session.commit()
+# Commit reviews to the database
+session.commit()
 
-        games.append(game)
-
-    reviews = []
-    for game in games:
-        for i in range(random.randint(1,5)):
-            review = Review(
-                score=random.randint(0, 10),
-                comment=fake.sentence(),
-                game_id=game.id
-            )
-
-            reviews.append(review)
-    
-    session.bulk_save_objects(reviews)
-    session.commit()
-    session.close()
+print("Database seeded with sample data.")
